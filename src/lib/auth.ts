@@ -3,6 +3,10 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import { db } from "@/lib/db";
 import bcrypt from "bcryptjs";
 
+const nextAuthSecret =
+  process.env.NEXTAUTH_SECRET ??
+  (process.env.NODE_ENV === "development" ? "dev-only-secret-change-me" : undefined);
+
 declare module "next-auth" {
   interface Session {
     user: {
@@ -42,19 +46,15 @@ export const authOptions: NextAuthOptions = {
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        console.log("[DEBUG] authorize called", credentials);
         if (!credentials?.username || !credentials?.password) {
-          console.log("[DEBUG] Missing username or password");
           return null;
         }
 
         const user = await db.user.findUnique({
           where: { username: credentials.username },
         });
-        console.log("[DEBUG] User from DB:", user);
 
         if (!user) {
-          console.log("[DEBUG] User not found");
           return null;
         }
 
@@ -62,14 +62,11 @@ export const authOptions: NextAuthOptions = {
           credentials.password,
           user.password
         );
-        console.log("[DEBUG] Password match:", passwordMatch);
 
         if (!passwordMatch) {
-          console.log("[DEBUG] Password incorrect");
           return null;
         }
 
-        console.log("[DEBUG] Login success, returning user");
         return {
           id: user.id,
           username: user.username,
@@ -108,7 +105,7 @@ export const authOptions: NextAuthOptions = {
   session: {
     strategy: "jwt",
   },
-  secret: process.env.NEXTAUTH_SECRET || "attendance-secret-key-2024",
+  secret: nextAuthSecret,
 };
 
 const handler = NextAuth(authOptions);

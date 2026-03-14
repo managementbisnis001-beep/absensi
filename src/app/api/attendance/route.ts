@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { requireAuth } from "@/lib/api-auth";
 
 export async function GET(request: Request) {
+  const authError = await requireAuth();
+  if (authError) return authError;
+
   try {
     const { searchParams } = new URL(request.url);
     const courseId = searchParams.get("courseId");
@@ -39,6 +43,9 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const authError = await requireAuth();
+  if (authError) return authError;
+
   try {
     const body = await request.json();
     const { studentId, courseId, scheduleId, date, status, notes } = body;

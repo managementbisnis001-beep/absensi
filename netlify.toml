@@ -1,0 +1,6 @@
+[build]
+  command = "npx prisma generate && npx next build"
+
+[functions]
+  external_node_modules = ["@prisma/client", "prisma"]
+  included_files = ["node_modules/.prisma/client/**", "prisma/**"]

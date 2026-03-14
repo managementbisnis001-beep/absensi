@@ -1,8 +1,12 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import bcrypt from "bcryptjs";
+import { requireAdmin } from "@/lib/api-auth";
 
 export async function GET() {
+  const authError = await requireAdmin();
+  if (authError) return authError;
+
   try {
     const users = await db.user.findMany({
       select: {
@@ -23,6 +27,9 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  const authError = await requireAdmin();
+  if (authError) return authError;
+
   try {
     const body = await request.json();
     const { username, password, name, email, role } = body;

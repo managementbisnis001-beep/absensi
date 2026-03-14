@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { requireAdmin, requireAuth } from "@/lib/api-auth";
 
 export async function GET() {
+  const authError = await requireAuth();
+  if (authError) return authError;
+
   try {
     const students = await db.student.findMany({
       orderBy: { nim: "asc" },
@@ -13,6 +17,9 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  const authError = await requireAdmin();
+  if (authError) return authError;
+
   try {
     const body = await request.json();
     const { nim, name, email, phone, class: studentClass } = body;

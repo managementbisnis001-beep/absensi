@@ -121,6 +121,7 @@ function LoginPage() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const showDefaultCredentials = process.env.NODE_ENV !== "production";
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -210,11 +211,13 @@ function LoginPage() {
               )}
             </Button>
           </form>
-          <div className="mt-4 p-3 bg-muted rounded-lg text-sm text-muted-foreground">
-            <p className="font-medium mb-1">Default Login Admin:</p>
-            <p>Username: <code className="bg-background px-1 rounded">admin</code></p>
-            <p>Password: <code className="bg-background px-1 rounded">admin123</code></p>
-          </div>
+          {showDefaultCredentials && (
+            <div className="mt-4 p-3 bg-muted rounded-lg text-sm text-muted-foreground">
+              <p className="font-medium mb-1">Default Login Admin:</p>
+              <p>Username: <code className="bg-background px-1 rounded">admin</code></p>
+              <p>Password: <code className="bg-background px-1 rounded">admin123</code></p>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

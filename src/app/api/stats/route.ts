@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { requireAuth } from "@/lib/api-auth";
 
 export async function GET() {
+  const authError = await requireAuth();
+  if (authError) return authError;
+
   try {
     const [totalStudents, totalCourses, totalSchedules, attendances] = await Promise.all([
       db.student.count(),
