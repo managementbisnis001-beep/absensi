@@ -1,157 +1,166 @@
-# Deploy ke Netlify
+# Deploy ke Netlify DB
 
-Panduan ini dibuat untuk proyek ini apa adanya: Next.js App Router + Prisma + NextAuth + MySQL.
+Panduan ini sekarang mengikuti stack proyek yang sudah diubah ke:
 
-## 1. Pahami dulu kenapa deploy Anda gagal
+- Next.js App Router
+- Prisma
+- NextAuth
+- PostgreSQL via Netlify DB / Neon
 
-Ada 3 penyebab utama:
+## 1. Yang berubah dari versi lama
 
-1. Netlify Anda masih menjalankan `next build && next export`.
-2. Proyek ini punya API route dan auth, jadi tidak bisa dipasang sebagai static export.
-3. `DATABASE_URL` Anda masih menunjuk ke `localhost`, padahal Netlify tidak bisa mengakses database di laptop Anda.
+Sebelumnya proyek ini memakai MySQL lokal.
 
-## 2. Database proyek ini ada di mana?
+Sekarang Prisma sudah diarahkan ke PostgreSQL:
 
-Saat ini database Anda ada di mesin lokal sendiri, karena file `.env` memakai `localhost`.
+- runtime memakai `NETLIFY_DATABASE_URL`
+- migrasi memakai `NETLIFY_DATABASE_URL_UNPOOLED`
 
-Contoh saat ini:
+Ini cocok dengan environment variable yang dibuat Netlify DB.
 
-```env
-DATABASE_URL="mysql://root@localhost:3306/absensi"
-```
+## 2. Database proyek ini sekarang di mana?
 
-Artinya:
+Kalau Anda memakai Netlify DB, database-nya sebenarnya adalah PostgreSQL yang ditenagai Neon.
 
-- `mysql`
-  Jenis database yang dipakai adalah MySQL.
-- `localhost:3306`
-  Database ada di komputer Anda sendiri.
-- `absensi`
-  Nama databasenya.
+Di Netlify Anda akan melihat minimal 2 variable penting:
 
-Kalau aplikasi mau online di Netlify, database harus dipindahkan ke layanan MySQL yang bisa diakses dari internet. Netlify tidak menyediakan database MySQL internal untuk aplikasi ini.
+- `NETLIFY_DATABASE_URL`
+  Dipakai aplikasi saat jalan normal.
+- `NETLIFY_DATABASE_URL_UNPOOLED`
+  Dipakai Prisma untuk migrasi/schema operation.
 
-## 3. Rekomendasi bentuk database production
+## 3. Environment variable yang wajib
 
-Untuk proyek ini, pilih database **MySQL managed/hosted**. Jangan ganti provider dulu kalau Anda masih pemula, karena schema Prisma proyek ini memang sudah memakai `mysql`.
+Isi yang dibutuhkan aplikasi:
 
-Yang Anda butuhkan hanyalah 1 hal:
-
-- connection string MySQL production, formatnya seperti ini:
-
-```env
-DATABASE_URL="mysql://USER:PASSWORD@HOST:3306/NAMA_DATABASE"
-```
-
-## 4. Environment variable yang wajib
-
-Masukkan variable ini di Netlify:
-
-- `DATABASE_URL`
-  Isi dengan URL database MySQL online Anda.
+- `NETLIFY_DATABASE_URL`
+- `NETLIFY_DATABASE_URL_UNPOOLED`
 - `NEXTAUTH_SECRET`
-  Isi dengan string random panjang.
 - `NEXTAUTH_URL`
-  Isi dengan URL final situs Anda, misalnya `https://nama-site-anda.netlify.app`
 
 Template ada di file [.env.example](/c:/Users/AKUN%20PT%20MISCOMPUTERS/Downloads/workspace-90e77287-b70c-4373-b0b5-d4e2f3332867%20(1)/.env.example).
 
-## 5. Cara isi Environment Variables di Netlify
+## 4. Cara isi env di Netlify
 
 Masuk ke:
 
 `Project configuration` -> `Environment variables`
 
-Lalu tambahkan 3 variable tadi satu per satu.
+Lalu pastikan:
 
-Catatan penting:
+1. `NETLIFY_DATABASE_URL` sudah ada
+2. `NETLIFY_DATABASE_URL_UNPOOLED` sudah ada
+3. tambahkan `NEXTAUTH_SECRET`
+4. tambahkan `NEXTAUTH_URL`
 
-- kalau Netlify menampilkan pilihan scope, centang `Builds` dan `Functions`
-- jangan simpan secret di `netlify.toml`
-- simpan secret hanya di UI Netlify
-- kalau password database punya karakter aneh seperti `@`, `:`, atau `/`, biasanya harus di-URL-encode
+Catatan:
 
-## 6. Setting Netlify yang benar
+- kalau ada pilihan scope, centang `Builds` dan `Functions`
+- jangan simpan secret di file repo
+- `NEXTAUTH_URL` harus URL final situs Anda
 
-File [netlify.toml](/c:/Users/AKUN%20PT%20MISCOMPUTERS/Downloads/workspace-90e77287-b70c-4373-b0b5-d4e2f3332867%20(1)/netlify.toml) sudah saya tambahkan.
+Contoh:
 
-Isi utamanya:
+```env
+NEXTAUTH_URL="https://nama-site-anda.netlify.app"
+```
 
-- build command: `npx prisma generate && npx next build`
-- Prisma client dibawa ke serverless function Netlify
+## 5. Cara isi env lokal untuk development
 
-Di dashboard Netlify, ubah juga setting lama Anda:
+Karena Prisma sekarang membaca env Netlify-style, file `.env` lokal Anda juga harus memakai nama yang sama.
 
-1. Hapus build command lama `next build && next export`
-2. Jangan pakai `out` sebagai publish directory untuk proyek ini
-3. Kalau ada setting lama di UI yang bentrok, samakan dengan file `netlify.toml`
-4. Ubah deploy log visibility ke `Private logs`
+Contoh:
 
-## 7. Migrasi database production
+```env
+NETLIFY_DATABASE_URL="postgresql://user:password@host/dbname?sslmode=require&channel_binding=require"
+NETLIFY_DATABASE_URL_UNPOOLED="postgresql://user:password@host/dbname?sslmode=require&channel_binding=require"
+NEXTAUTH_SECRET="isi-random-panjang"
+NEXTAUTH_URL="http://localhost:3000"
+```
 
-Setelah Anda punya database MySQL online, jalankan migrasi ke database tersebut.
+## 6. Build setting Netlify
 
-Langkah aman:
+File [netlify.toml](/c:/Users/AKUN%20PT%20MISCOMPUTERS/Downloads/workspace-90e77287-b70c-4373-b0b5-d4e2f3332867%20(1)/netlify.toml) sudah disiapkan.
 
-1. Salin dulu connection string database production
-2. Ganti sementara `DATABASE_URL` lokal Anda ke URL production
-3. Jalankan:
+Yang perlu Anda pastikan di dashboard Netlify:
+
+1. jangan pakai `next build && next export`
+2. jangan isi publish directory dengan `out`
+3. kalau ada setting UI yang bentrok, samakan dengan `netlify.toml`
+4. pakai `Private logs`
+
+## 7. Migrasi database PostgreSQL
+
+Setelah env PostgreSQL siap, jalankan migrasi ke database baru.
+
+Urutan aman:
+
+1. isi `.env` lokal dengan `NETLIFY_DATABASE_URL` dan `NETLIFY_DATABASE_URL_UNPOOLED`
+2. jalankan:
 
 ```bash
 bun run db:deploy
 ```
 
-4. Lalu isi data admin awal:
+3. lalu isi admin awal:
 
 ```bash
 bun run db:seed
 ```
 
-5. Setelah selesai, deploy ulang ke Netlify
-
 ## 8. Login pertama
 
-File seed akan membuat akun default:
+Seed default akan membuat akun:
 
 - username: `admin`
 - password: `admin123`
 
-Segera ganti password setelah login pertama.
+Begitu berhasil login, langsung ganti password.
 
-## 9. Urutan deploy paling aman untuk pemula
+## 9. Urutan deploy paling aman
 
-Ikuti urutan ini:
+Ikuti langkah ini:
 
-1. Siapkan database MySQL online
-2. Ambil `DATABASE_URL`
-3. Isi `DATABASE_URL`, `NEXTAUTH_SECRET`, dan `NEXTAUTH_URL` di Netlify
-4. Jalankan `bun run db:deploy`
-5. Jalankan `bun run db:seed`
-6. Push/commit perubahan terbaru
-7. Redeploy di Netlify
+1. claim/aktifkan Netlify DB Anda
+2. pastikan `NETLIFY_DATABASE_URL` dan `NETLIFY_DATABASE_URL_UNPOOLED` ada
+3. tambahkan `NEXTAUTH_SECRET`
+4. tambahkan `NEXTAUTH_URL`
+5. isi `.env` lokal dengan nilai yang sama
+6. jalankan `bun run db:deploy`
+7. jalankan `bun run db:seed`
+8. push perubahan
+9. redeploy di Netlify
 
 ## 10. Kalau deploy masih gagal
 
-Cek 5 hal ini:
+Cek hal berikut:
 
-1. Apakah build command masih `next export`
-2. Apakah `DATABASE_URL` masih `localhost`
-3. Apakah `NEXTAUTH_SECRET` sudah ada
-4. Apakah migrasi production sudah dijalankan
-5. Apakah Netlify masih memakai log publik
+1. apakah env PostgreSQL terisi
+2. apakah `NEXTAUTH_SECRET` sudah ada
+3. apakah `NEXTAUTH_URL` sudah sesuai domain final
+4. apakah migrasi sudah dijalankan ke database PostgreSQL
+5. apakah build command lama `next export` masih tersimpan di UI Netlify
 
-## 11. Catatan keamanan penting
+## 11. Catatan penting migrasi
 
-Sebelum deploy, proyek ini sudah saya perbaiki agar:
+Repo ini sudah diubah dari MySQL ke PostgreSQL.
 
-- route API tidak bisa lagi dipanggil tanpa login
-- route manajemen user/data master dibatasi ke admin
-- kredensial default tidak tampil di halaman login saat production
-- debug log login sensitif tidak ikut tercetak
+Artinya:
 
-Kalau Anda mau, langkah berikutnya saya bisa bantu sampai tuntas untuk:
+- migrasi awal sekarang ditujukan untuk PostgreSQL
+- database MySQL lama tidak lagi menjadi target utama proyek
+- kalau ada data penting di MySQL lama, data itu perlu dipindahkan manual
 
-1. memilih database hosting yang paling cocok
-2. menyiapkan environment variable satu per satu
-3. membersihkan file `.env` Anda
-4. membuat checklist deploy final sampai benar-benar live
+## 12. Catatan keamanan
+
+Kalau connection string database pernah tampil utuh di screenshot atau log publik:
+
+1. rotate/reset password database
+2. update env variable di Netlify
+3. update `.env` lokal Anda
+
+## 13. File penting
+
+- Prisma schema: [prisma/schema.prisma](/c:/Users/AKUN%20PT%20MISCOMPUTERS/Downloads/workspace-90e77287-b70c-4373-b0b5-d4e2f3332867%20(1)/prisma/schema.prisma)
+- Migration awal PostgreSQL: [prisma/migrations/20260314034924_init/migration.sql](/c:/Users/AKUN%20PT%20MISCOMPUTERS/Downloads/workspace-90e77287-b70c-4373-b0b5-d4e2f3332867%20(1)/prisma/migrations/20260314034924_init/migration.sql)
+- Template env: [.env.example](/c:/Users/AKUN%20PT%20MISCOMPUTERS/Downloads/workspace-90e77287-b70c-4373-b0b5-d4e2f3332867%20(1)/.env.example)
