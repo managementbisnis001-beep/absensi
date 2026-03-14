@@ -1,0 +1,85 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// User / Admin / Dosen
+model User {
+  id        String   @id @default(cuid())
+  username  String   @unique
+  password  String   // Will be hashed
+  name      String
+  email     String?
+  role      String   @default("dosen") // admin, dosen
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Mahasiswa / Student
+model Student {
+  id        String   @id @default(cuid())
+  nim       String   @unique // Nomor Induk Mahasiswa
+  name      String   // Nama lengkap
+  email     String?  
+  phone     String?  
+  class     String?  // Kelas (A, B, C, etc)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  attendance Attendance[]
+}
+
+// Mata Kuliah / Course
+model Course {
+  id          String   @id @default(cuid())
+  code        String   @unique // Kode mata kuliah (e.g., IF2301)
+  name        String   // Nama mata kuliah
+  credits     Int      // SKS
+  lecturer    String?  // Dosen pengampu
+  semester    Int      // Semester (1-8)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  schedules Schedule[]
+  attendance Attendance[]
+}
+
+// Jadwal / Schedule
+model Schedule {
+  id        String   @id @default(cuid())
+  courseId  String
+  course    Course   @relation(fields: [courseId], references: [id])
+  day       String   // Senin, Selasa, etc
+  startTime String   // Format: "08:00"
+  endTime   String   // Format: "10:00"
+  room      String?  // Ruangan
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  attendance Attendance[]
+}
+
+// Absensi / Attendance
+model Attendance {
+  id         String   @id @default(cuid())
+  studentId  String
+  student    Student  @relation(fields: [studentId], references: [id])
+  courseId   String
+  course     Course   @relation(fields: [courseId], references: [id])
+  scheduleId String
+  schedule   Schedule @relation(fields: [scheduleId], references: [id])
+  date       String   // Format: YYYY-MM-DD
+  status     String   // hadir, sakit, izin, alpha
+  notes      String?  // Catatan
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  
+  @@unique([studentId, courseId, scheduleId, date])
+}
